@@ -268,3 +268,127 @@ else:
 plt.savefig(ruta_salida, dpi=300)
 print(f"Gráfico guardado exitosamente en: {ruta_salida}")
 plt.show()
+
+# %%
+# ==============================================================================
+# BLOQUE 5: DESCARGA DE SECUENCIAS REALES DESDE NCBI REFSEQ (Bio.Entrez)
+# ==============================================================================
+import time
+from pathlib import Path
+from Bio import Entrez, SeqIO
+from Bio.SeqRecord import SeqRecord
+
+# 1. Identificación obligatoria ante los servidores de NCBI E-utilities
+Entrez.email = "docencia.bioinformatica@ciip.edu.mx"
+
+# Catálogo de transcritos canónicos humanos (RefSeq mRNA)
+catalogo_ncbi = {
+    "NM_000546.6": ("TP53",   "Supresor Tumoral"),
+    "NM_007294.4": ("BRCA1",  "Supresor Tumoral"),
+    "NM_004985.5": ("KRAS",   "Oncogen"),
+    "NM_004333.6": ("BRAF",   "Oncogen"),
+    "NM_005228.5": ("EGFR",   "Oncogen"),
+    "NM_000106.6": ("CYP2D6", "Farmacogen")
+}
+
+# Definición de ruta local para guardar el FASTA real descargado
+carpeta_data = Path("sesion-01-python-biologico/data") if Path("sesion-01-python-biologico/data").exists() else Path("data")
+carpeta_data.mkdir(parents=True, exist_ok=True)
+archivo_fasta_real = carpeta_data / "refseq_cds_humano.fasta"
+
+registros_cds = []
+
+print("Conectando con NCBI Nucleotide (RefSeq)...\n")
+for accesion, (simbolo, rol) in catalogo_ncbi.items():
+    # Descargamos el registro completo en formato GenBank ('gb') para extraer el CDS exacto
+    handle = Entrez.efetch(db="nucleotide", id=accesion, rettype="gb", retmode="text")
+    registro_gb = SeqIO.read(handle, "genbank")
+    handle.close()
+
+    # Buscamos la anotación de la región codificante (CDS) dentro del registro GenBank
+    secuencia_cds = None
+    producto_proteico = "No especificado"
+    for feature in registro_gb.features:
+        if feature.type == "CDS":
+            secuencia_cds = feature.extract(registro_gb.seq)
+            producto_proteico = feature.qualifiers.get("product", ["No especificado"])[0]
+            break
+
+    if secuencia_cds is not None:
+        nuevo_registro = SeqRecord(
+            secuencia_cds,
+            id=f"{simbolo}_{accesion}|{rol.replace(' ', '_')}",
+            description=f"{producto_proteico} [Homo sapiens]"
+        )
+        registros_cds.append(nuevo_registro)
+        print(f" -> Descargado {simbolo} ({accesion}): {len(secuencia_cds)} pb | {producto_proteico}")
+
+    # Pausa de 0.5 s para respetar el límite de NCBI (máx. 3 peticiones/seg por IP)
+    time.sleep(0.5)
+
+# Guardamos las secuencias reales en un archivo .fasta estándar en disco
+SeqIO.write(registros_cds, archivo_fasta_real, "fasta")
+print(f"\nArchivo FASTA real guardado en: {archivo_fasta_real}")
+
+# %%
+# ==============================================================================
+# BLOQUE 6: ANÁLISIS CON NUESTRA CLASE 'Secuencia' SOBRE LOS DATOS REALES DE NCBI
+# ==============================================================================
+genes_reales = []
+
+# Leemos el archivo .fasta físico recién descargado de NCBI
+for reg in SeqIO.parse(archivo_fasta_real, "fasta"):
+    gen_id, rol_raw = reg.id.split("|")
+    obj_real = Secuencia(
+        id_gen=gen_id,
+        secuencia_str=str(reg.seq),
+        categoria=rol_raw.replace("_", " ")
+    )
+    genes_reales.append(obj_real)
+
+# Consolidamos métricas en Pandas
+df_ncbi_real = (
+    pd.DataFrame([g.exportar_fila() for g in genes_reales])
+    .sort_values(by="Porcentaje_GC", ascending=False)
+    .reset_index(drop=True)
+)
+
+print("\n--- MÉTRICAS DE SECUENCIAS CODIFICANTES COMPLETAS (NCBI REFSEQ) ---")
+print(df_ncbi_real.to_string(index=False))
+
+# Visualización comparativa de longitud proteica vs. contenido GC real
+fig, ax = plt.subplots(figsize=(9, 5.5), dpi=150)
+
+sns.scatterplot(
+    data=df_ncbi_real,
+    x="Longitud_aa",
+    y="Porcentaje_GC",
+    hue="Categoria",
+    style="Categoria",
+    s=160,
+    ax=ax
+)
+
+for _, fila in df_ncbi_real.iterrows():
+    ax.text(
+        fila["Longitud_aa"] + 35,
+        fila["Porcentaje_GC"] + 0.4,
+        fila["Gen"].split("_")[0],
+        fontsize=9.5,
+        fontweight="bold"
+    )
+
+ax.axhline(df_ncbi_real["Porcentaje_GC"].mean(), color="#D55E00", linestyle="--", linewidth=1.2, label="Media GC (%)")
+ax.set_title("Genes Humanos Completos (NCBI RefSeq): Tamaño Proteico vs. Contenido GC", fontweight="bold", loc="left")
+ax.set_xlabel("Longitud de la Proteína Completa (aminoácidos)")
+ax.set_ylabel("Contenido Guanina-Citosina (%)")
+ax.margins(x=0.15, y=0.12)
+ax.legend(title="Rol Funcional", loc="upper right")
+
+sns.despine(top=True, right=True)
+plt.tight_layout()
+
+ruta_fig_ncbi = Path("sesion-01-python-biologico/output/resultado_ncbi_real.png") if Path("sesion-01-python-biologico/output").exists() else Path("resultado_ncbi_real.png")
+plt.savefig(ruta_fig_ncbi, dpi=300)
+print(f"Gráfico real guardado en: {ruta_fig_ncbi}")
+plt.show()

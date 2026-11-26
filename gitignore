@@ -23,3 +23,7 @@ output/*
 # Sistema Operativo
 .DS_Store
 Thumbs.db
+
+# Datos descargados de repositorios públicos (conserva la carpeta con .gitkeep)
+data/*
+!data/.gitkeep

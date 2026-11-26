@@ -1,0 +1,226 @@
+---
+title: "Programación Científica en Python para Bioestadística"
+subtitle: "Sesión 1: Biopython, Programación Orientada a Objetos (POO), Pandas y Seaborn"
+author: "Dr. Eric Jonathan Maciel Cruz"
+institute: "CIIP — Módulo 2"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    transition: fade
+    width: 1600
+    height: 900
+    margin: 0.08
+    code-line-numbers: true
+    highlight-style: github
+    embed-resources: true
+    footer: "Módulo 2 | Sesión 1: Python Biológico (POO, Biopython, Pandas y Seaborn)"
+execute:
+  echo: true
+  eval: false
+---
+
+## Ruta de la Sesión 1
+
+Construiremos un *pipeline* bioinformático reproducible de principio a fin para auditar regiones codificantes (CDS) de genes de relevancia clínica:
+
+1. **Entorno Aislado (`.venv`):** Configuración reproducible de dependencias en terminal y VS Code.
+2. **Biopython Básico (`Bio.Seq`):** Operaciones del Dogma Central de la Biología Molecular.
+3. **Programación Orientada a Objetos (POO):** Diseño de la clase `Secuencia` con validación biológica.
+4. **Ciencia de Datos Genómicos (`Pandas` + `Seaborn`):** Parseo de FASTA, agregación estadística y visualización de grado publicación.
+
+::: {.callout-tip}
+## Dinámica de trabajo
+Abre `sesion-01-python-biologico/practica/s01_practica_alumno.py` en VS Code y ejecuta cada bloque con **`Ctrl + Enter`**.
+:::
+
+---
+
+## Paso 0: Entorno Virtual en Terminal (`.venv`)
+
+Aislar las librerías evita conflictos entre versiones de Python y mantiene limpio el repositorio de Git.
+
+::: {.columns}
+::: {.column width="50%"}
+### Windows (PowerShell)
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+:::
+
+::: {.column width="50%"}
+### macOS / Linux / Git Bash
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+:::
+:::
+
+**Verificación en VS Code:**
+
+* Selecciona **`.venv`** en la esquina superior derecha (**Select Kernel**).
+* Ejecuta el **Bloque 0** (`Ctrl + Enter`) para confirmar que `sys.prefix != sys.base_prefix`.
+
+---
+
+## 1. De Texto Plano (`str`) a Objetos `Bio.Seq`
+
+Un `str` de Python trata el ADN como cualquier cadena de texto; un objeto `Seq` incorpora reglas y operaciones bioquímicas nativas.
+
+```python
+from Bio.Seq import Seq
+from Bio.SeqUtils import gc_fraction, molecular_weight
+
+adn = Seq("ATGGAGGAGCCGCAGTCAGATCCTAGCGTCGAGCCCCCTCTGTGA")
+
+# Operaciones del Dogma Central
+complementaria = adn.complement()
+reversa_comp   = adn.reverse_complement()
+arn_mensajero  = adn.transcribe()
+proteina       = adn.translate(to_stop=True)
+
+# Métricas fisicoquímicas
+porcentaje_gc  = round(gc_fraction(adn) * 100, 2)
+peso_kda       = round(molecular_weight(adn, seq_type="DNA") / 1000, 2)
+```
+
+::: {.callout-note}
+## Nota de versión (Biopython ≥ 1.82)
+La antigua función `GC()` fue reemplazada por `gc_fraction()`, que retorna una proporción en el rango `[0.0, 1.0]`.
+:::
+
+---
+
+## 2. ¿Por qué POO en Bioinformática?
+
+Cuando analizamos decenas de loci clínicos, las variables sueltas se vuelven frágiles y propensas a errores silenciosos.
+
+```{mermaid}
+flowchart LR
+    subgraph Procedural ["Enfoque Procedural (Frágil)"]
+        A["seq = 'ATG XZT...'"] --> B["calcular_gc(seq)"]
+        B --> C["Error silencioso o datos dispersos"]
+    end
+    subgraph POO ["Enfoque Orientado a Objetos (Robusto)"]
+        D["obj = Secuencia(id, seq, rol)"] --> E{"Validación __init__"}
+        E -->|Inválida| F["ValueError inmediato"]
+        E -->|Válida| G["Atributos + Métodos encapsulados"]
+    end
+```
+
+---
+
+## Anatomía de una Clase en Python
+
+Una **clase** (`class`) es el plano estructural; cada gen cargado en memoria es una **instancia** u objeto independiente.
+
+| Componente | Sintaxis | Función en nuestra clase `Secuencia` |
+| :--- | :--- | :--- |
+| **Constructor** | `def __init__(self, ...)` | Inicializa atributos, normaliza mayúsculas y valida bases `{A,T,C,G,N}`. |
+| **Atributos** | `self.id_gen`, `self.seq` | Almacenan el estado propio de cada gen analizado. |
+| **Métodos** | `def traducir(self):` | Acciones que operan directamente sobre `self.seq`. |
+| **Dunder methods** | `__len__`, `__repr__` | Permiten usar `len(gen)` y `print(gen)` de forma nativa en Python. |
+
+---
+
+## Implementación: Constructor y Validación
+
+```python
+class Secuencia:
+    """Molde para representar y analizar una secuencia codificante de ADN (CDS)."""
+
+    BASES_VALIDAS = {"A", "T", "C", "G", "N"}
+
+    def __init__(self, id_gen: str, secuencia_str: str, categoria: str = "Sin clasificar"):
+        self.id_gen = id_gen.strip()
+        self.categoria = categoria.strip()
+
+        # Normalización y control de calidad de alfabeto
+        secuencia_limpia = secuencia_str.upper().replace(" ", "").replace("\n", "")
+        caracteres_raros = set(secuencia_limpia) - self.BASES_VALIDAS
+        if caracteres_raros:
+            raise ValueError(f"Error en '{self.id_gen}': caracteres no válidos {caracteres_raros}")
+
+        self.seq = Seq(secuencia_limpia)
+```
+
+---
+
+## Implementación: Métodos Moleculares y Exportación
+
+```python
+    def calcular_gc(self) -> float:
+        return round(gc_fraction(self.seq) * 100, 2)
+
+    def traducir(self) -> str:
+        if len(self.seq) % 3 != 0:
+            raise ValueError(f"Error en '{self.id_gen}': longitud no múltiplo de 3.")
+        return str(self.seq.translate(to_stop=True))
+
+    def exportar_fila(self) -> dict:
+        """Empaqueta las métricas del objeto en un diccionario listo para Pandas."""
+        peptido = self.traducir()
+        return {
+            "Gen": self.id_gen,
+            "Categoria": self.categoria,
+            "Longitud_pb": len(self),
+            "Longitud_aa": len(peptido),
+            "Porcentaje_GC": self.calcular_gc(),
+            "Peso_kDa": round(molecular_weight(self.seq, seq_type="DNA") / 1000, 2)
+        }
+```
+
+---
+
+## 3. Pipeline: FASTA $\rightarrow$ Objetos $\rightarrow$ Pandas
+
+Integramos `Bio.SeqIO` para leer registros FASTA, instanciar objetos `Secuencia` y tabular resultados con `pd.DataFrame`.
+
+```{mermaid}
+flowchart LR
+    F["Archivo FASTA"] -->|SeqIO.parse| L["Lista de objetos Secuencia"]
+    L -->|exportar_fila| DF["DataFrame Pandas"]
+    DF -->|groupby + agg| R["Resumen por Rol Funcional"]
+```
+
+```python
+# Conversión de lista de objetos a tabla analítica
+tabla_genes = pd.DataFrame([g.exportar_fila() for g in mis_genes])
+
+# Estadística descriptiva agrupada por categoría clínica
+resumen_grupos = (
+    tabla_genes
+    .groupby("Categoria", as_index=False)
+    .agg(Total_Genes=("Gen", "count"), Media_GC=("Porcentaje_GC", "mean"))
+    .round(2)
+)
+```
+
+---
+
+## 4. Visualización Científica con Seaborn
+
+Principios aplicados en el Bloque 4 para figuras de reporte o publicación:
+
+* **Codificación visual accesible:** Paleta `colorblind` para diferenciar roles funcionales (*Oncogén*, *Supresor Tumoral*, *Farmacogén*).
+* **Referencia estadística explícita:** Línea vertical discontinua (`axvline`) marcando la media global de `%GC` (`53.2%`).
+* **Doble dimensión analítica:** Comparación univariada ordenada (`barplot`) + relación bivariada (`scatterplot` de Peso Molecular vs. `%GC`).
+* **Exportación:** Guardado automático en `output/` a **300 DPI**.
+
+---
+
+## Taller Práctico y Rúbrica (10 pts)
+
+Completa los espacios **`# TODO` (1 al 9)** en `s01_practica_alumno.py` y verifica que todo el script ejecute sin errores:
+
+| Criterio | Puntos | Indicador de Logro |
+| :--- | :---: | :--- |
+| **1. Clase `Secuencia` (POO)** | **2.5** | Validación `ValueError`, atributos limpios, métodos funcionales y `__len__`. |
+| **2. Biopython (`SeqIO` / `Seq`)** | **2.5** | Parseo dinámico de FASTA y cálculo correcto de transcripción, traducción y `%GC`. |
+| **3. Tabulación en Pandas** | **2.5** | `DataFrame` ordenado por `%GC` y tabla resumen agrupada por categoría. |
+| **4. Gráfico en Seaborn** | **2.5** | Figura clara con leyenda bien ubicada, ejes etiquetados y exportada a PNG. |
+
