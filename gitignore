@@ -1,0 +1,25 @@
+# Python y Jupyter
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# R y RStudio
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# Quarto y R Markdown
+/.quarto/
+*_files/
+*_cache/
+
+# Outputs generados en clase (conserva la carpeta vacía con .gitkeep)
+output/*
+!output/.gitkeep
+
+# Sistema Operativo
+.DS_Store
+Thumbs.db
