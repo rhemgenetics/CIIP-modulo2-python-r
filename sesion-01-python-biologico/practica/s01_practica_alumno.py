@@ -1,25 +1,22 @@
 # %% [markdown]
-# # Sesión 1: Python Biológico desde Cero (Versión Solución — Instructor)
+# # Sesión 1: Python Biológico desde Cero (Práctica Interactiva)
+# **Nombre del alumno:** [Escribe tu nombre aquí]
 #
-# ### Preparación inicial en Terminal (ejecutar una sola vez antes de iniciar):
-# 1. Abre la terminal en VS Code (`Terminal -> New Terminal`).
-# 2. Crea y activa tu entorno virtual:
-#    * **Windows (PowerShell):** `python -m venv .venv` y luego `.venv\Scripts\Activate.ps1`
-#    * **Mac / Linux / Git Bash:** `python3 -m venv .venv` y luego `source .venv/bin/activate`
-# 3. En la esquina superior derecha de este archivo, haz clic en **Select Kernel** y elige **`.venv`**.
-# 4. Presiona **`Ctrl + Enter`** dentro de cada celda (`# %%`) para ejecutar paso a paso.
+# ### Instrucciones:
+# 1. Verifica que arriba a la derecha (**Select Kernel**) esté seleccionado **`.venv`**.
+# 2. Ejecuta cada bloque (`# %%`) de arriba hacia abajo presionando **`Ctrl + Enter`**.
+# 3. En cada **`# TODO`**, borra únicamente el símbolo **`# `** al inicio de la línea indicada (o presiona `Ctrl + }` / `Ctrl + /`) y vuelve a ejecutar el bloque con **`Ctrl + Enter`** para ver el cambio.
 
 # %%
 # ==============================================================================
-# BLOQUE 0: VERIFICACIÓN DE ENTORNO VIRTUAL E INSTALACIÓN DE PAQUETES
+# BLOQUE 0: VERIFICACIÓN DE ENTORNO Y PAQUETES (Presiona Ctrl + Enter)
 # ==============================================================================
 import sys
 import subprocess
 import importlib.util
 
 if sys.prefix == sys.base_prefix:
-    print("ADVERTENCIA: No estas dentro de un entorno virtual (.venv).")
-    print(" -> Crea .venv en la terminal y seleccionalo en 'Select Kernel' (arriba a la derecha).")
+    print("ADVERTENCIA: Selecciona '.venv' arriba a la derecha (Select Kernel).")
 else:
     print(f"Entorno virtual activo: {sys.prefix}")
 
@@ -30,59 +27,44 @@ paquetes_requeridos = {
     "matplotlib": "matplotlib"
 }
 
-print("\nVerificando paquetes necesarios en tu entorno...\n")
-
 for modulo, paquete_pip in paquetes_requeridos.items():
     if importlib.util.find_spec(modulo) is None:
         print(f"Instalando '{paquete_pip}'...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", paquete_pip])
-        print(f" -> '{paquete_pip}' instalado correctamente.")
-    else:
-        print(f" -> '{paquete_pip}' ya se encuentra instalado.")
 
 import Bio
 import pandas as pd
 import seaborn as sns
-import matplotlib
 import matplotlib.pyplot as plt
 
-print("\n--- ENTORNO LISTO PARA TRABAJAR ---")
-print(f"Python:     {sys.version.split()[0]}")
-print(f"Biopython:  {Bio.__version__}")
-print(f"Pandas:     {pd.__version__}")
-print(f"Seaborn:    {sns.__version__}")
-print(f"Matplotlib: {matplotlib.__version__}")
+print(f"\nTodo listo. Python {sys.version.split()[0]} | Biopython {Bio.__version__} | Pandas {pd.__version__}")
 
 # %%
 # ==============================================================================
-# BLOQUE 1: DE TEXTO PLANO A BIOPYTHON (LO MÁS BÁSICO)
+# BLOQUE 1: CALENTAMIENTO CON BIOPYTHON (Presiona Ctrl + Enter y observa)
 # ==============================================================================
 from Bio.Seq import Seq
 from Bio.SeqUtils import gc_fraction, molecular_weight
 
-adn_texto = "ATGGAGGAGCCGCAGTCAGATCCTAGCGTCGAGCCCCCTCTGTGA"
-print("Tipo en Python básico:", type(adn_texto))
+adn_tp53 = Seq("ATGGAGGAGCCGCAGTCAGATCCTAGCGTCGAGCCCCCTCTGTGA")
 
-adn_bio = Seq(adn_texto)
-print("Tipo en Biopython:    ", type(adn_bio))
+complementaria = adn_tp53.complement()
+reversa_comp   = adn_tp53.reverse_complement()
+arn_mensajero  = adn_tp53.transcribe()
+proteina       = adn_tp53.translate(to_stop=True)
+porcentaje_gc  = round(gc_fraction(adn_tp53) * 100, 2)
 
-complementaria = adn_bio.complement()
-reversa_comp   = adn_bio.reverse_complement()
-arn_mensajero  = adn_bio.transcribe()
-proteina       = adn_bio.translate(to_stop=True)
-porcentaje_gc  = round(gc_fraction(adn_bio) * 100, 2)
-
-print("\n--- RESULTADOS DEL ANÁLISIS BÁSICO ---")
-print(f"ADN (5'->3'):       {adn_bio}")
-print(f"Complementaria:     {complementaria}")
-print(f"Reversa Comp.:      {reversa_comp}")
-print(f"ARNm transcrito:    {arn_mensajero}")
-print(f"Proteína traducida: {proteina} ({len(proteina)} aminoácidos)")
-print(f"Contenido GC:       {porcentaje_gc}%")
+print("--- RESULTADOS DEL DOGMA CENTRAL ---")
+print("ADN original:      ", adn_tp53)
+print("Complementaria:    ", complementaria)
+print("Reversa comp.:     ", reversa_comp)
+print("ARNm transcrito:   ", arn_mensajero)
+print("Proteína obtenida: ", proteina)
+print("Contenido GC (%):  ", porcentaje_gc)
 
 # %%
 # ==============================================================================
-# BLOQUE 2: PROGRAMACIÓN ORIENTADA A OBJETOS (POO) APLICADA A SECUENCIAS
+# BLOQUE 2: TU PRIMERA CLASE EN PYTHON ('Secuencia')
 # ==============================================================================
 class Secuencia:
     """Molde para representar y analizar una secuencia codificante de ADN (CDS)."""
@@ -96,7 +78,7 @@ class Secuencia:
         secuencia_limpia = secuencia_str.upper().replace(" ", "").replace("\n", "")
         caracteres_raros = set(secuencia_limpia) - self.BASES_VALIDAS
         if caracteres_raros:
-            raise ValueError(f"Error en '{self.id_gen}': caracteres no válidos {caracteres_raros}")
+            raise ValueError(f"Error en '{self.id_gen}': letras no válidas {caracteres_raros}")
         
         self.seq = Seq(secuencia_limpia)
 
@@ -104,18 +86,21 @@ class Secuencia:
         return round(gc_fraction(self.seq) * 100, 2)
 
     def transcribir(self) -> str:
-        return str(self.seq.transcribe())
+        # TODO 1: Borra el '#' de la siguiente línea para activar la transcripción a ARNm:
+        # return str(self.seq.transcribe())
+        return "Pendiente (activa el TODO 1)"
 
     def traducir(self) -> str:
         if len(self.seq) % 3 != 0:
-            raise ValueError(f"Error en '{self.id_gen}': la longitud ({len(self.seq)} pb) no es múltiplo de 3.")
-        return str(self.seq.translate(to_stop=True))
+            raise ValueError(f"Error en '{self.id_gen}': la longitud no es múltiplo de 3.")
+        # TODO 2: Borra el '#' de la siguiente línea para activar la traducción a proteína:
+        # return str(self.seq.translate(to_stop=True))
+        return "Pendiente (activa el TODO 2)"
 
     def peso_kda(self) -> float:
         return round(molecular_weight(self.seq, seq_type="DNA") / 1000, 2)
 
     def exportar_fila(self) -> dict:
-        """Empaqueta los resultados del objeto en un diccionario para Pandas."""
         peptido = self.traducir()
         return {
             "Gen": self.id_gen,
@@ -133,14 +118,15 @@ class Secuencia:
     def __repr__(self) -> str:
         return f"<Secuencia '{self.id_gen}' | {self.categoria} | {len(self)} pb | GC={self.calcular_gc()}%>"
 
+# Probamos nuestro molde con un gen de ejemplo:
 gen_ejemplo = Secuencia("TP53_demo", "ATGGAGGAGCCGCAGTCAGATCCTAGCGTCGAGCCCCCTCTGTGA", "Supresor Tumoral")
-print("Objeto creado:", gen_ejemplo)
-print("Longitud con len():", len(gen_ejemplo), "pares de bases")
-print("Proteína:", gen_ejemplo.traducir())
+print("Objeto creado: ", gen_ejemplo)
+print("ARNm obtenido: ", gen_ejemplo.transcribir())
+print("Proteína:      ", gen_ejemplo.traducir())
 
 # %%
 # ==============================================================================
-# BLOQUE 3: LECTURA DE ARCHIVOS FASTA Y CONSOLIDACIÓN EN PANDAS
+# BLOQUE 3: LECTURA DE UN ARCHIVO FASTA Y TABLA EN PANDAS
 # ==============================================================================
 import io
 from Bio import SeqIO
@@ -169,36 +155,17 @@ mis_genes = []
 
 for registro in SeqIO.parse(archivo_memoria, "fasta"):
     nombre, rol = registro.id.split("|")
-    objeto_gen = Secuencia(
-        id_gen=nombre,
-        secuencia_str=str(registro.seq),
-        categoria=rol.replace("_", " ")
+    mis_genes.append(
+        Secuencia(id_gen=nombre, secuencia_str=str(registro.seq), categoria=rol.replace("_", " "))
     )
-    mis_genes.append(objeto_gen)
-
-print(f"Se cargaron {len(mis_genes)} genes como objetos Secuencia:\n")
-for g in mis_genes:
-    print(" ", g)
 
 tabla_genes = pd.DataFrame([g.exportar_fila() for g in mis_genes])
-tabla_genes = tabla_genes.sort_values(by="Porcentaje_GC", ascending=False).reset_index(drop=True)
 
-print("\n--- TABLA DE RESULTADOS GENÓMICOS ---")
+# TODO 3: Borra el '#' de la siguiente línea para ordenar la tabla de mayor a menor %GC:
+# tabla_genes = tabla_genes.sort_values(by="Porcentaje_GC", ascending=False).reset_index(drop=True)
+
+print("--- TABLA DE RESULTADOS GENÓMICOS ---")
 print(tabla_genes.to_string(index=False))
-
-resumen_grupos = (
-    tabla_genes
-    .groupby("Categoria", as_index=False)
-    .agg(
-        Total_Genes=("Gen", "count"),
-        Media_GC=("Porcentaje_GC", "mean"),
-        Media_Aminoacidos=("Longitud_aa", "mean")
-    )
-    .round(2)
-)
-
-print("\n--- RESUMEN POR ROL FUNCIONAL ---")
-print(resumen_grupos.to_string(index=False))
 
 # %%
 # ==============================================================================
@@ -207,74 +174,36 @@ print(resumen_grupos.to_string(index=False))
 from pathlib import Path
 
 sns.set_theme(style="whitegrid", context="notebook", palette="colorblind")
-
 fig, axes = plt.subplots(1, 2, figsize=(13, 5), dpi=150)
 
-# Gráfico 1: Contenido GC por gen ordenado
-sns.barplot(
-    data=tabla_genes,
-    x="Porcentaje_GC",
-    y="Gen",
-    hue="Categoria",
-    dodge=False,
-    ax=axes[0]
-)
-media_gc = tabla_genes["Porcentaje_GC"].mean()
-axes[0].axvline(media_gc, color="#D55E00", linestyle="--", linewidth=1.5, label=f"Media ({media_gc:.1f}%)")
-axes[0].set_title("A. Contenido GC (%) por Locus", fontweight="bold", loc="left")
-axes[0].set_xlabel("Contenido Guanina-Citosina (%)")
-axes[0].set_ylabel("Gen Analizado")
-axes[0].set_xlim(0, 85)
-axes[0].legend(title="Categoría", loc="lower right")
+# Panel izquierdo (axes[0] — ya activo como referencia):
+sns.barplot(data=tabla_genes, x="Longitud_pb", y="Gen", hue=None, dodge=False, ax=axes[0])
 
-# Gráfico 2: Relación entre Peso Molecular (kDa) y Contenido GC (%)
-sns.scatterplot(
-    data=tabla_genes,
-    x="Peso_kDa",
-    y="Porcentaje_GC",
-    hue="Categoria",
-    style="Categoria",
-    s=130,
-    ax=axes[1]
-)
-for _, fila in tabla_genes.iterrows():
-    axes[1].text(
-        fila["Peso_kDa"] + 0.3,
-        fila["Porcentaje_GC"] + 0.4,
-        fila["Gen"].split("_")[0],
-        fontsize=9
-    )
+# TODO 4: Borra el '#' de la siguiente línea para activar el gráfico de %GC por categoría:
+# sns.barplot(data=tabla_genes, x="Porcentaje_GC", y="Gen", hue="Categoria", dodge=False, ax=axes[1])
 
-axes[1].set_title("B. Peso Molecular vs. Contenido GC", fontweight="bold", loc="left")
-axes[1].set_xlabel("Peso Molecular ADN (kDa)")
-axes[1].set_ylabel("Contenido GC (%)")
-axes[1].set_xlim(23, 35)
-axes[1].set_ylim(35, 80)
-axes[1].legend(title="Categoría", loc="upper left")
+axes[0].set_title("A. Referencia: Longitud (pb) por Gen", fontweight="bold", loc="left")
+axes[1].set_title("B. Tu Gráfico: Contenido GC (%) por Rol", fontweight="bold", loc="left")
+axes[1].set_xlim(0, 85)
 
 sns.despine(top=True, right=True)
 plt.tight_layout()
 
-if Path("sesion-01-python-biologico/output").exists():
-    ruta_salida = Path("sesion-01-python-biologico/output/resultado_sesion1_genomica.png")
-elif Path("../output").exists():
-    ruta_salida = Path("../output/resultado_sesion1_genomica.png")
-else:
-    ruta_salida = Path("resultado_sesion1_genomica.png")
-
+ruta_salida = Path("sesion-01-python-biologico/output/mi_grafico_s01.png") if Path("sesion-01-python-biologico/output").exists() else Path("mi_grafico_s01.png")
 plt.savefig(ruta_salida, dpi=300)
-print(f"Gráfico guardado exitosamente en: {ruta_salida}")
+print(f"Gráfico guardado en: {ruta_salida}")
 plt.show()
 
 # %%
 # ==============================================================================
-# BLOQUE 5: DESCARGA DE SECUENCIAS REALES DESDE NCBI REFSEQ (Bio.Entrez)
+# BLOQUE 5: DESCARGA DE SECUENCIAS REALES DESDE NCBI REFSEQ (Internet)
 # ==============================================================================
 import time
+from pathlib import Path
 from Bio import Entrez
 from Bio.SeqRecord import SeqRecord
 
-Entrez.email = "docencia.bioinformatica@ciip.edu.mx"
+Entrez.email = "alumno@ciip.edu.mx"
 
 catalogo_ncbi = {
     "NM_000546.6": ("TP53",   "Supresor Tumoral"),
@@ -282,7 +211,9 @@ catalogo_ncbi = {
     "NM_004985.5": ("KRAS",   "Oncogen"),
     "NM_004333.6": ("BRAF",   "Oncogen"),
     "NM_005228.5": ("EGFR",   "Oncogen"),
-    "NM_000106.6": ("CYP2D6", "Farmacogen")
+    "NM_000106.6": ("CYP2D6", "Farmacogen"),
+    # TODO 5: Borra el '#' de la siguiente línea para descargar también el gen supresor APC:
+    # "NM_000038.6": ("APC",    "Supresor Tumoral"),
 }
 
 carpeta_data = Path("sesion-01-python-biologico/data") if Path("sesion-01-python-biologico/data").exists() else Path("data")
@@ -297,23 +228,14 @@ for accesion, (simbolo, rol) in catalogo_ncbi.items():
     registro_gb = SeqIO.read(handle, "genbank")
     handle.close()
 
-    secuencia_cds = None
-    producto_proteico = "No especificado"
     for feature in registro_gb.features:
         if feature.type == "CDS":
             secuencia_cds = feature.extract(registro_gb.seq)
-            producto_proteico = feature.qualifiers.get("product", ["No especificado"])[0]
+            registros_cds.append(
+                SeqRecord(secuencia_cds, id=f"{simbolo}_{accesion}|{rol.replace(' ', '_')}", description="")
+            )
+            print(f" -> Descargado {simbolo} ({accesion}): {len(secuencia_cds)} pb")
             break
-
-    if secuencia_cds is not None:
-        nuevo_registro = SeqRecord(
-            secuencia_cds,
-            id=f"{simbolo}_{accesion}|{rol.replace(' ', '_')}",
-            description=f"{producto_proteico} [Homo sapiens]"
-        )
-        registros_cds.append(nuevo_registro)
-        print(f" -> Descargado {simbolo} ({accesion}): {len(secuencia_cds)} pb | {producto_proteico}")
-
     time.sleep(0.5)
 
 SeqIO.write(registros_cds, archivo_fasta_real, "fasta")
@@ -321,18 +243,15 @@ print(f"\nArchivo FASTA real guardado en: {archivo_fasta_real}")
 
 # %%
 # ==============================================================================
-# BLOQUE 6: ANÁLISIS CON NUESTRA CLASE 'Secuencia' SOBRE LOS DATOS REALES DE NCBI
+# BLOQUE 6: ANÁLISIS REAL CON TU CLASE 'Secuencia'
 # ==============================================================================
 genes_reales = []
 
 for reg in SeqIO.parse(archivo_fasta_real, "fasta"):
     gen_id, rol_raw = reg.id.split("|")
-    obj_real = Secuencia(
-        id_gen=gen_id,
-        secuencia_str=str(reg.seq),
-        categoria=rol_raw.replace("_", " ")
+    genes_reales.append(
+        Secuencia(id_gen=gen_id, secuencia_str=str(reg.seq), categoria=rol_raw.replace("_", " "))
     )
-    genes_reales.append(obj_real)
 
 df_ncbi_real = (
     pd.DataFrame([g.exportar_fila() for g in genes_reales])
@@ -340,41 +259,24 @@ df_ncbi_real = (
     .reset_index(drop=True)
 )
 
-print("\n--- MÉTRICAS DE SECUENCIAS CODIFICANTES COMPLETAS (NCBI REFSEQ) ---")
+print("\n--- GENES HUMANOS COMPLETOS (NCBI REFSEQ) ---")
 print(df_ncbi_real.to_string(index=False))
 
-fig, ax = plt.subplots(figsize=(9, 5.5), dpi=150)
+fig, axes = plt.subplots(1, 2, figsize=(13, 5), dpi=150)
 
-sns.scatterplot(
-    data=df_ncbi_real,
-    x="Longitud_aa",
-    y="Porcentaje_GC",
-    hue="Categoria",
-    style="Categoria",
-    s=160,
-    ax=ax
-)
+# Panel izquierdo (axes[0] — ya activo como referencia):
+sns.scatterplot(data=df_ncbi_real, x="Longitud_pb", y="Peso_kDa", hue="Categoria", s=160, ax=axes[0])
 
-for _, fila in df_ncbi_real.iterrows():
-    ax.text(
-        fila["Longitud_aa"] + 35,
-        fila["Porcentaje_GC"] + 0.4,
-        fila["Gen"].split("_")[0],
-        fontsize=9.5,
-        fontweight="bold"
-    )
+# TODO 6: Borra el '#' de la siguiente línea para comparar tamaño proteico vs %GC:
+# sns.scatterplot(data=df_ncbi_real, x="Longitud_aa", y="Porcentaje_GC", hue="Categoria", style="Categoria", s=160, ax=axes[1])
 
-ax.axhline(df_ncbi_real["Porcentaje_GC"].mean(), color="#D55E00", linestyle="--", linewidth=1.2, label="Media GC (%)")
-ax.set_title("Genes Humanos Completos (NCBI RefSeq): Tamaño Proteico vs. Contenido GC", fontweight="bold", loc="left")
-ax.set_xlabel("Longitud de la Proteína Completa (aminoácidos)")
-ax.set_ylabel("Contenido Guanina-Citosina (%)")
-ax.margins(x=0.15, y=0.12)
-ax.legend(title="Rol Funcional", loc="upper right")
+axes[0].set_title("A. Referencia: Longitud (pb) vs. Peso (kDa)", fontweight="bold", loc="left")
+axes[1].set_title("B. Tu Gráfico: Aminoácidos vs. %GC", fontweight="bold", loc="left")
 
 sns.despine(top=True, right=True)
 plt.tight_layout()
 
-ruta_fig_ncbi = Path("sesion-01-python-biologico/output/resultado_ncbi_real.png") if Path("sesion-01-python-biologico/output").exists() else Path("resultado_ncbi_real.png")
+ruta_fig_ncbi = Path("sesion-01-python-biologico/output/mi_grafico_ncbi.png") if Path("sesion-01-python-biologico/output").exists() else Path("mi_grafico_ncbi.png")
 plt.savefig(ruta_fig_ncbi, dpi=300)
 print(f"Gráfico real guardado en: {ruta_fig_ncbi}")
 plt.show()
